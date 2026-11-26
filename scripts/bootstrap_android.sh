@@ -3,7 +3,10 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 command -v flutter >/dev/null || { echo 'Flutter SDK required' >&2; exit 1; }
 if [ ! -f android/app/src/main/AndroidManifest.xml ]; then
-  flutter create --platforms=android --org com.dudozi --project-name teumview --no-pub .
+  scaffold="$(mktemp -d)"
+  trap 'rm -rf "$scaffold"' EXIT
+  flutter create --platforms=android --org com.dudozi --project-name teumview --no-pub "$scaffold/teumview"
+  cp -R "$scaffold/teumview/android" ./android
 fi
 python3 - <<'PY'
 from pathlib import Path
