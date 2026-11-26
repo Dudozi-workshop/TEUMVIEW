@@ -38,9 +38,9 @@ class _ContentState extends State<DashboardContent> {
   List<Map<String,dynamic>> get tasks {try{return (jsonDecode(saved) as List).map((e)=>Map<String,dynamic>.from(e as Map)).toList();}catch(_){return [];}}
   Future<void> pickPhoto() async {try{final picked=await ImagePicker().pickImage(source:ImageSource.gallery);if(picked==null)return;final dir=await getApplicationDocumentsDirectory();final file=await File(picked.path).copy('${dir.path}/photo_${widget.tile.id}_${DateTime.now().microsecondsSinceEpoch}');await save(file.path);}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('사진을 불러오지 못했습니다.')));}}
   String two(int n)=>n.toString().padLeft(2,'0');
-  Widget large(String value)=>Align(alignment:Alignment.centerLeft,child:FittedBox(fit:BoxFit.scaleDown,child:Text(value,style:const TextStyle(fontSize:80,fontWeight:FontWeight.w500))));
-  Widget panel(String title,List<Widget> children)=>Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:Theme.of(context).textTheme.labelSmall),const SizedBox(height:4),Expanded(child:ListView(padding:EdgeInsets.zero,children:children))]);
-  Widget action(String text,VoidCallback callback)=>TextButton(onPressed:widget.editing?null:callback,child:Text(text));
+  Widget large(String value)=>Align(alignment:Alignment.centerLeft,child:FittedBox(fit:BoxFit.scaleDown,child:Text(value,maxLines:1,style:Theme.of(context).textTheme.displayLarge?.copyWith(fontSize:80,fontWeight:FontWeight.w400,letterSpacing:-2))));
+  Widget panel(String title,List<Widget> children)=>Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,maxLines:1,overflow:TextOverflow.ellipsis,style:Theme.of(context).textTheme.labelMedium?.copyWith(color:Theme.of(context).colorScheme.onSurfaceVariant,fontWeight:FontWeight.w500)),const SizedBox(height:8),Expanded(child:ListView(padding:EdgeInsets.zero,children:children))]);
+  Widget action(String text,VoidCallback callback)=>Align(alignment:Alignment.centerLeft,child:TextButton(style:TextButton.styleFrom(padding:const EdgeInsets.symmetric(horizontal:4,vertical:4),minimumSize:const Size(48,48)),onPressed:widget.editing?null:callback,child:Text(text)));
   @override Widget build(BuildContext context){final now=widget.now;switch(widget.tile.kind){
     case 'clock':return large('${two(now.hour)}:${two(now.minute)}');
     case 'date':return large('${now.month}월 ${now.day}일 ${['월','화','수','목','금','토','일'][now.weekday-1]}');
