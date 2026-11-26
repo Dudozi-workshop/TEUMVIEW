@@ -9,8 +9,8 @@ class SkinStyle {
   final Brightness brightness;
   final double radius, cardOpacity;
   static const catalog = [
-    SkinStyle('dark', 'Dark', Color(0xff191a1c), Color(0xff25272a), Brightness.dark),
-    SkinStyle('light', 'Light', Color(0xfff5f5f3), Color(0xffeaeae7), Brightness.light),
+    SkinStyle('dark', '다크', Color(0xff191a1c), Color(0xff25272a), Brightness.dark),
+    SkinStyle('light', '라이트', Color(0xfff5f5f3), Color(0xffeaeae7), Brightness.light),
     SkinStyle('oled', 'OLED', Colors.black, Color(0xff111111), Brightness.dark),
   ];
   static SkinStyle resolve(String? id) => catalog.firstWhere((s) => s.id == id, orElse: () => catalog.first);
@@ -20,5 +20,31 @@ class SkinStyle {
 class SkinPreview extends StatelessWidget {
   const SkinPreview({super.key, required this.style});
   final SkinStyle style;
-  @override Widget build(BuildContext context) => Container(width: 92, height: 52, padding: const EdgeInsets.all(5), decoration: BoxDecoration(color: style.background, borderRadius: BorderRadius.circular(6)), child: Row(children: [Expanded(child: Container(alignment: Alignment.center, decoration: BoxDecoration(color: style.surface.withOpacity(style.cardOpacity), borderRadius: BorderRadius.circular(style.radius.clamp(0,12).toDouble())), child: Text('09:41', style: TextStyle(fontSize: 13, color: style.brightness == Brightness.dark ? Colors.white : Colors.black)))), const SizedBox(width: 4), Expanded(child: Column(children: [Expanded(child: Container(decoration: BoxDecoration(color: style.surface, borderRadius: BorderRadius.circular(3)))), const SizedBox(height: 3), Expanded(child: Container(decoration: BoxDecoration(color: style.accent, borderRadius: BorderRadius.circular(3))))]))]));
+  @override
+  Widget build(BuildContext context) {
+    final ink = style.brightness == Brightness.dark ? Colors.white : Colors.black87;
+    Widget tile(Widget child) => Container(
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: style.surface.withValues(alpha: style.cardOpacity),
+        borderRadius: BorderRadius.circular((style.radius / 2).clamp(0, 8).toDouble())),
+      child: child,
+    );
+    return Container(width: 112, height: 64, padding: const EdgeInsets.all(5),
+      decoration: BoxDecoration(color: style.background, borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: ink.withValues(alpha: 0.12))),
+      child: Row(children: [
+        Expanded(flex: 3, child: tile(Text('09:41', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w400, color: ink)))),
+        const SizedBox(width: 4),
+        Expanded(flex: 2, child: Column(children: [
+          Expanded(child: tile(Text('18°', style: TextStyle(fontSize: 11, color: ink)))),
+          const SizedBox(height: 4),
+          Expanded(child: tile(Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(Icons.circle, size: 5, color: style.accent),
+            const SizedBox(width: 3),
+            Text('D-7', style: TextStyle(fontSize: 9, color: ink)),
+          ]))),
+        ])),
+      ]),
+    );
+  }
 }
