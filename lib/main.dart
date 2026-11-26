@@ -86,16 +86,16 @@ class _DashboardState extends State<Dashboard> {
   late final store=BoardStore(widget.prefs);
   late String active=store.active;
   late final boards=<bool,Board>{for(final wide in [false,true]) wide:store.load(active,wide)};
-  Future<void> switchBoard(String id) async {await store.select(id);if(!mounted)return;setState((){active=id;selected=null;for(final wide in [false,true]){boards[wide]=store.load(id,wide);undo[wide]!.clear();redo[wide]!.clear();}});}
+  Future<void> switchBoard(String id) async {await store.select(id);if(!mounted)return;setState((){active=id;selected=null;preview=null;for(final wide in [false,true]){boards[wide]=store.load(id,wide);undo[wide]!.clear();redo[wide]!.clear();}});}
   Future<void> renameBoard() async {
     String value=store.name(active);
-    final result=await showDialog<String>(context:context,builder:(ctx)=>AlertDialog(title:const Text('Rename dashboard'),content:TextFormField(initialValue:value,maxLength:40,onChanged:(v)=>value=v),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancel')),TextButton(onPressed:()=>Navigator.pop(ctx,value),child:const Text('Save'))]));
+    final result=await showDialog<String>(context:context,builder:(ctx)=>AlertDialog(title:const Text('대시보드 이름 변경'),content:TextFormField(initialValue:value,maxLength:40,onChanged:(v)=>value=v),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('취소')),TextButton(onPressed:()=>Navigator.pop(ctx,value),child:const Text('저장'))]));
     if(result==null||result.trim().isEmpty||!mounted)return;
     await store.rename(active,result);if(mounted)setState((){});
   }
   Future<void> deleteBoard() async {
     final id=active;
-    final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:Text('Delete ${store.name(id)}?'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Cancel')),TextButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('Delete'))]));
+    final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:Text('Delete ${store.name(id)}?'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('취소')),TextButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('삭제'))]));
     if(yes!=true||!mounted)return;
     await store.delete(id);if(mounted)await switchBoard(store.active);
   }
@@ -111,22 +111,22 @@ class _DashboardState extends State<Dashboard> {
   @override
   void dispose(){timer?.cancel();super.dispose();}
   void save(bool wide,Board b){setState(()=>boards[wide]=b);widget.prefs.setString(store.key(active,wide),b.encode());}
-  void commit(bool wide,Board? b){if(b==null){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('배치 공간이 부족하거나 다른 위젯과 겹칩니다.'),duration:Duration(seconds:1)));return;}undo[wide]!.add(boards[wide]!);redo[wide]!.clear();save(wide,b);}
+  void commit(bool wide,Board? b){if(b!=null&&b.encode()==boards[wide]!.encode())return;if(b==null){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('배치 공간이 부족하거나 다른 위젯과 겹칩니다.'),duration:Duration(seconds:1)));return;}undo[wide]!.add(boards[wide]!);redo[wide]!.clear();save(wide,b);}
   void history(bool wide,bool back){final from=(back?undo:redo)[wide]!;final to=(back?redo:undo)[wide]!;if(from.isEmpty)return;to.add(boards[wide]!);save(wide,from.removeLast());}
-  void add(bool wide,String kind){final b=boards[wide]!;for(var y=0;y<b.rows;y++){for(var x=0;x<b.cols;x++){final t=Tile(DateTime.now().microsecondsSinceEpoch.toString(),kind,x,y,2,2);final next=b.put(t);if(next!=null){commit(wide,next);return;}}}ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('No free space')));}
+  void add(bool wide,String kind){final b=boards[wide]!;for(var y=0;y<b.rows;y++){for(var x=0;x<b.cols;x++){final t=Tile(DateTime.now().microsecondsSinceEpoch.toString(),kind,x,y,2,2);final next=b.put(t);if(next!=null){commit(wide,next);return;}}}ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('위젯을 추가할 공간이 없습니다.')));}
   String two(int n)=>n.toString().padLeft(2,'0');
   @override
   Widget build(BuildContext context)=>Scaffold(body:Stack(fit:StackFit.expand,children:[if(widget.photo!=null) Image.file(File(widget.photo!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink()),if(widget.photo!=null) const ColoredBox(color:Color(0x55000000)),SafeArea(child:LayoutBuilder(builder:(context,outer){
     final wide=outer.maxWidth>outer.maxHeight;
     final b=boards[wide]!;
     return Column(children:[if(editing) SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
-      TextButton(onPressed:()=>setState((){editing=false;selected=null;undo[false]!.clear();undo[true]!.clear();redo[false]!.clear();redo[true]!.clear();}),child:const Text('Done')),
-      IconButton(tooltip:'Undo',onPressed:()=>history(wide,true),icon:const Icon(Icons.undo)),
-      IconButton(tooltip:'Redo',onPressed:()=>history(wide,false),icon:const Icon(Icons.redo)),
-      PopupMenuButton<String>(tooltip:'Add widget',onSelected:(kind)=>add(wide,kind),itemBuilder:(_)=>[for(final kind in widgetKinds) PopupMenuItem(value:kind,child:Text(widgetLabels[kind]!))],icon:const Icon(Icons.add)),
-      PopupMenuButton<String>(tooltip:'대시보드',onSelected:(id)async{if(id=='rename'){await renameBoard();}else if(id=='delete'){await deleteBoard();}else if(id=='+'){await store.create();await switchBoard(store.active);}else{await switchBoard(id);}},itemBuilder:(_)=>[for(final id in store.ids) PopupMenuItem(value:id,child:Text('${store.name(id)}${id==active?" ✓":""}')),const PopupMenuItem(value:'+',child:Text('새 대시보드')),const PopupMenuItem(value:'rename',child:Text('Rename')),if(store.ids.length>1)const PopupMenuItem(value:'delete',child:Text('Delete'))],icon:const Icon(Icons.dashboard_customize)),
-      IconButton(tooltip:'Settings',onPressed:widget.onSettings,icon:const Icon(Icons.settings)),
-      IconButton(tooltip:'Reset layout',onPressed:()=>commit(wide,Board(boards[wide]!.cols,boards[wide]!.rows,Board.defaults(wide).tiles.map((t)=>active=='default'?t:Tile('${active}_${t.id}',t.kind,t.x,t.y,t.w,t.h)).toList())),icon:const Icon(Icons.restart_alt)),
+      TextButton(onPressed:()=>setState((){editing=false;selected=null;preview=null;undo[false]!.clear();undo[true]!.clear();redo[false]!.clear();redo[true]!.clear();}),child:const Text('완료')),
+      IconButton(tooltip:'실행 취소',onPressed:undo[wide]!.isEmpty?null:()=>history(wide,true),icon:const Icon(Icons.undo)),
+      IconButton(tooltip:'다시 실행',onPressed:redo[wide]!.isEmpty?null:()=>history(wide,false),icon:const Icon(Icons.redo)),
+      PopupMenuButton<String>(tooltip:'위젯 추가',onSelected:(kind)=>add(wide,kind),itemBuilder:(_)=>[for(final kind in widgetKinds) PopupMenuItem(value:kind,child:Text(widgetLabels[kind]!))],icon:const Icon(Icons.add)),
+      PopupMenuButton<String>(tooltip:'대시보드',onSelected:(id)async{if(id=='rename'){await renameBoard();}else if(id=='delete'){await deleteBoard();}else if(id=='+'){await store.create();await switchBoard(store.active);}else{await switchBoard(id);}},itemBuilder:(_)=>[for(final id in store.ids) PopupMenuItem(value:id,child:Text('${store.name(id)}${id==active?" ✓":""}')),const PopupMenuItem(value:'+',child:Text('새 대시보드')),const PopupMenuItem(value:'rename',child:Text('이름 변경')),if(store.ids.length>1)const PopupMenuItem(value:'delete',child:Text('삭제'))],icon:const Icon(Icons.dashboard_customize)),
+      IconButton(tooltip:'설정',onPressed:widget.onSettings,icon:const Icon(Icons.settings)),
+      IconButton(tooltip:'배치 초기화',onPressed:()=>commit(wide,Board(boards[wide]!.cols,boards[wide]!.rows,Board.defaults(wide).tiles.map((t)=>active=='default'?t:Tile('${active}_${t.id}',t.kind,t.x,t.y,t.w,t.h)).toList())),icon:const Icon(Icons.restart_alt)),
     ])),Expanded(child:Padding(padding:EdgeInsets.fromLTRB(8+(widget.burnin&&!editing?now.minute%3*2.0:0),8,8,8+(widget.burnin&&!editing?now.minute%3*2.0:0)),child:LayoutBuilder(builder:(context,c){
       final cw=c.maxWidth/b.cols,ch=c.maxHeight/b.rows;
       return GestureDetector(behavior:HitTestBehavior.opaque,onLongPress:()=>setState(()=>editing=true),child:Stack(fit:StackFit.expand,children:[
@@ -146,10 +146,10 @@ class TileView extends StatefulWidget {
 }
 class _TileViewState extends State<TileView>{
   Offset delta=Offset.zero;
-  @override Widget build(BuildContext context)=>Padding(padding:const EdgeInsets.all(4),child:GestureDetector(onTap:widget.editing?widget.onSelect:null,onPanStart:widget.editing?(_){widget.onSelect();setState(()=>delta=Offset.zero);}:null,onPanUpdate:widget.editing?(d){delta+=d.delta;widget.onPreview(delta,false);}:null,onPanEnd:widget.editing?(_){widget.onPreview(null,false);widget.onMove(delta);setState(()=>delta=Offset.zero);}:null,onPanCancel:(){widget.onPreview(null,false);setState(()=>delta=Offset.zero);},child:Transform.translate(offset:Offset.zero,child:Container(decoration:BoxDecoration(color:widget.surface,borderRadius:BorderRadius.circular(widget.radius),border:widget.editing&&widget.selected?Border.all(color:Theme.of(context).colorScheme.primary):null),child:Stack(children:[Positioned.fill(child:Padding(padding:const EdgeInsets.all(12),child:widget.content)),if(widget.editing&&widget.selected)...[Positioned(top:0,right:0,child:IconButton(tooltip:'Remove',onPressed:widget.onDelete,icon:const Icon(Icons.close,size:18))),Positioned(bottom:0,right:0,child:ResizeHandle(onResize:widget.onResize,onPreview:(d)=>widget.onPreview(d,true)))]])))));
+  @override Widget build(BuildContext context)=>Padding(padding:const EdgeInsets.all(4),child:GestureDetector(onTap:widget.editing?widget.onSelect:null,onPanStart:widget.editing?(_){widget.onSelect();setState(()=>delta=Offset.zero);}:null,onPanUpdate:widget.editing?(d){delta+=d.delta;widget.onPreview(delta,false);}:null,onPanEnd:widget.editing?(_){widget.onPreview(null,false);widget.onMove(delta);setState(()=>delta=Offset.zero);}:null,onPanCancel:(){widget.onPreview(null,false);setState(()=>delta=Offset.zero);},child:Transform.translate(offset:Offset.zero,child:Container(decoration:BoxDecoration(color:widget.surface,borderRadius:BorderRadius.circular(widget.radius),border:widget.editing&&widget.selected?Border.all(color:Theme.of(context).colorScheme.primary):null),child:Stack(children:[Positioned.fill(child:Padding(padding:const EdgeInsets.all(12),child:widget.content)),if(widget.editing&&widget.selected)...[Positioned(top:0,right:0,child:IconButton(tooltip:'위젯 삭제',onPressed:widget.onDelete,icon:const Icon(Icons.close,size:18))),Positioned(bottom:0,right:0,child:ResizeHandle(onResize:widget.onResize,onPreview:(d)=>widget.onPreview(d,true)))]])))));
 }
 class ResizeHandle extends StatefulWidget{
   const ResizeHandle({super.key,required this.onResize,required this.onPreview});final ValueChanged<Offset> onResize;final ValueChanged<Offset?> onPreview;
   @override State<ResizeHandle> createState()=>_ResizeHandleState();
 }
-class _ResizeHandleState extends State<ResizeHandle>{Offset delta=Offset.zero;@override Widget build(BuildContext context)=>GestureDetector(behavior:HitTestBehavior.opaque,onPanStart:(_)=>delta=Offset.zero,onPanUpdate:(d){delta+=d.delta;widget.onPreview(delta);},onPanEnd:(_){widget.onPreview(null);widget.onResize(delta);},onPanCancel:()=>widget.onPreview(null),child:const SizedBox(width:36,height:36,child:Icon(Icons.open_in_full,size:18)));}
+class _ResizeHandleState extends State<ResizeHandle>{Offset delta=Offset.zero;@override Widget build(BuildContext context)=>GestureDetector(behavior:HitTestBehavior.opaque,onPanStart:(_)=>delta=Offset.zero,onPanUpdate:(d){delta+=d.delta;widget.onPreview(delta);},onPanEnd:(_){widget.onPreview(null);widget.onResize(delta);},onPanCancel:()=>widget.onPreview(null),child:const SizedBox(width:48,height:48,child:Icon(Icons.open_in_full,size:18)));}
