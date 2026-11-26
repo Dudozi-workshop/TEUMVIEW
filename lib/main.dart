@@ -123,7 +123,7 @@ class _DashboardState extends State<Dashboard> {
       TextButton(onPressed:()=>setState((){editing=false;selected=null;preview=null;undo[false]!.clear();undo[true]!.clear();redo[false]!.clear();redo[true]!.clear();}),child:const Text('완료')),
       IconButton(tooltip:'실행 취소',onPressed:undo[wide]!.isEmpty?null:()=>history(wide,true),icon:const Icon(Icons.undo)),
       IconButton(tooltip:'다시 실행',onPressed:redo[wide]!.isEmpty?null:()=>history(wide,false),icon:const Icon(Icons.redo)),
-      PopupMenuButton<String>(tooltip:'위젯 추가',onSelected:(kind)=>add(wide,kind),itemBuilder:(_)=>[for(final kind in widgetKinds) PopupMenuItem(value:kind,child:Text(widgetLabels[kind]!))],icon:const Icon(Icons.add)),
+      IconButton(tooltip:'위젯 추가',onPressed:() async {final kind=await showModalBottomSheet<String>(context:context,isScrollControlled:true,builder:(_)=>const WidgetPicker());if(kind!=null&&mounted)add(wide,kind);},icon:const Icon(Icons.add)),
       PopupMenuButton<String>(tooltip:'대시보드',onSelected:(id)async{if(id=='rename'){await renameBoard();}else if(id=='delete'){await deleteBoard();}else if(id=='+'){await store.create();await switchBoard(store.active);}else{await switchBoard(id);}},itemBuilder:(_)=>[for(final id in store.ids) PopupMenuItem(value:id,child:Text('${store.name(id)}${id==active?" ✓":""}')),const PopupMenuItem(value:'+',child:Text('새 대시보드')),const PopupMenuItem(value:'rename',child:Text('이름 변경')),if(store.ids.length>1)const PopupMenuItem(value:'delete',child:Text('삭제'))],icon:const Icon(Icons.dashboard_customize)),
       IconButton(tooltip:'설정',onPressed:widget.onSettings,icon:const Icon(Icons.settings)),
       IconButton(tooltip:'배치 초기화',onPressed:()=>commit(wide,Board(boards[wide]!.cols,boards[wide]!.rows,Board.defaults(wide).tiles.map((t)=>active=='default'?t:Tile('${active}_${t.id}',t.kind,t.x,t.y,t.w,t.h)).toList())),icon:const Icon(Icons.restart_alt)),
@@ -153,3 +153,47 @@ class ResizeHandle extends StatefulWidget{
   @override State<ResizeHandle> createState()=>_ResizeHandleState();
 }
 class _ResizeHandleState extends State<ResizeHandle>{Offset delta=Offset.zero;@override Widget build(BuildContext context)=>GestureDetector(behavior:HitTestBehavior.opaque,onPanStart:(_)=>delta=Offset.zero,onPanUpdate:(d){delta+=d.delta;widget.onPreview(delta);},onPanEnd:(_){widget.onPreview(null);widget.onResize(delta);},onPanCancel:()=>widget.onPreview(null),child:const SizedBox(width:48,height:48,child:Icon(Icons.open_in_full,size:18)));}
+
+class WidgetPicker extends StatelessWidget {
+  const WidgetPicker({super.key});
+  static const icons = <String, IconData>{
+    'clock': Icons.schedule, 'date': Icons.today, 'weather': Icons.wb_sunny_outlined,
+    'calendar': Icons.calendar_month, 'agenda': Icons.event_note, 'tasks': Icons.checklist,
+    'memo': Icons.notes, 'battery': Icons.battery_full, 'dday': Icons.flag_outlined,
+    'photo': Icons.image_outlined,
+  };
+  static const samples = <String, String>{
+    'clock':'09:41', 'date':'11월 26일', 'weather':'18° · 맑음',
+    'calendar':'월 화 수 목 금', 'agenda':'09:00 일정', 'tasks':'할 일 2/4',
+    'memo':'오늘의 메모', 'battery':'85%', 'dday':'D-7', 'photo':'사진',
+  };
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SafeArea(child: FractionallySizedBox(heightFactor: 0.8, child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(padding: const EdgeInsets.fromLTRB(20,16,12,12), child: Row(children:[
+          Expanded(child: Text('위젯 추가', style: theme.textTheme.titleLarge)),
+          IconButton(tooltip:'닫기',onPressed:()=>Navigator.pop(context),icon:const Icon(Icons.close)),
+        ])),
+        Expanded(child: GridView.builder(
+          padding: const EdgeInsets.fromLTRB(16,0,16,16),
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent:200,mainAxisExtent:124,crossAxisSpacing:10,mainAxisSpacing:10),
+          itemCount: widgetKinds.length,
+          itemBuilder:(context,index){
+            final kind=widgetKinds.elementAt(index);
+            return Material(color:theme.colorScheme.surfaceContainerHighest,borderRadius:BorderRadius.circular(12),clipBehavior:Clip.antiAlias,
+              child:InkWell(onTap:()=>Navigator.pop(context,kind),child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                Icon(icons[kind]??Icons.widgets_outlined,size:20,color:theme.colorScheme.primary),
+                const Spacer(),
+                FittedBox(fit:BoxFit.scaleDown,child:Text(samples[kind]??'',style:theme.textTheme.titleLarge)),
+                const SizedBox(height:4),
+                Text(widgetLabels[kind]??kind,style:theme.textTheme.labelMedium),
+              ]))));
+          },
+        )),
+      ],
+    )));
+  }
+}
