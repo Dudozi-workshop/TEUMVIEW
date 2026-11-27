@@ -19,4 +19,4 @@ CI run 45776962613 passed analysis, tests and debug APK build before branding ch
 - Configure production OAuth and signing, verify weather service commercial terms, privacy disclosures and target SDK.
 - Build signed AAB, run device QA and Play testing, prepare listing assets.
 
-See `docs/release_setup.md`, `docs/google_calendar_setup.md` and `docs/release_gate.md`. Package ID com.dudozi.teumview is provisional. Paid skins and iOS are post-beta work.
+See `docs/release_setup.md`, `docs/google_calendar_setup.md` and `docs/release_gate.md`. Package ID com.dudozi.teumview is approved; Play developer account ready. Two premium skin previews and three presets are implemented; production billing and entitlement validation are beta release gates. iOS is post-beta. See docs/beta_release_checklist.md.
