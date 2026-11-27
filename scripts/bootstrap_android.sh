@@ -17,4 +17,7 @@ if 'android.permission.INTERNET' not in s:
 s=s.replace('android:label="teumview"', 'android:label="틈뷰"')
 p.write_text(s)
 PY
+if [ -d branding/android-res ]; then
+  cp -R branding/android-res/. android/app/src/main/res/
+fi
 flutter pub get
