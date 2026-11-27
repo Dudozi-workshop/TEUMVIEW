@@ -13,6 +13,11 @@ class SkinStyle {
     SkinStyle('light', '라이트', Color(0xfff5f5f3), Color(0xffeaeae7), Brightness.light),
     SkinStyle('oled', 'OLED', Colors.black, Color(0xff111111), Brightness.dark),
   ];
+  static const premiumCatalog = [
+    SkinStyle('sage_glass', '세이지 글래스', Color(0xffdce8df), Color(0xfff1f6ef), Brightness.light, accent: Color(0xff739b83), radius: 16, cardOpacity: .92),
+    SkinStyle('midnight_blue', '미드나이트 블루', Color(0xff101827), Color(0xff202e43), Brightness.dark, accent: Color(0xff8da9e6), radius: 12),
+  ];
+  static const premiumProducts = {'sage_glass':'teumview_skin_sage_glass','midnight_blue':'teumview_skin_midnight_blue'};
   static SkinStyle resolve(String? id) => catalog.firstWhere((s) => s.id == id, orElse: () => catalog.first);
   ThemeData theme({Color? accentOverride}) => ThemeData(useMaterial3: true, brightness: brightness, scaffoldBackgroundColor: background, colorScheme: ColorScheme.fromSeed(seedColor: accentOverride ?? accent, brightness: brightness));
 }
