@@ -107,7 +107,7 @@ class _DashboardState extends State<Dashboard> {
   DateTime now=DateTime.now();
   Timer? timer;
   @override
-  void initState(){super.initState();timer=Timer.periodic(const Duration(seconds:1),(_){if(mounted){final next=DateTime.now();if(!widget.lowPower||next.minute!=now.minute||next.hour!=now.hour||next.day!=now.day)setState(()=>now=next);}});}
+  void initState(){super.initState();if(!(widget.prefs.getBool('intro_seen')??false)){WidgetsBinding.instance.addPostFrameCallback((_)async{if(!mounted)return;await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(title:const Text('나만의 대시보드, 틈뷰'),content:const Text('화면을 길게 누르면 편집할 수 있어요. 추천 템플릿에서 시작하거나 위젯을 자유롭게 배치해 보세요.'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('시작하기'))]));await widget.prefs.setBool('intro_seen',true);});}timer=Timer.periodic(const Duration(seconds:1),(_){if(mounted){final next=DateTime.now();if(!widget.lowPower||next.minute!=now.minute||next.hour!=now.hour||next.day!=now.day)setState(()=>now=next);}});}
   @override
   void dispose(){timer?.cancel();super.dispose();}
   void save(bool wide,Board b){setState(()=>boards[wide]=b);widget.prefs.setString(store.key(active,wide),b.encode());}
