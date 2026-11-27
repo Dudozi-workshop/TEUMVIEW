@@ -20,6 +20,19 @@ class Board {
   Board remove(String id)=>Board(cols,rows,tiles.where((t)=>t.id!=id).toList());
   String encode()=>jsonEncode(tiles.map((t)=>t.toJson()).toList());
   static Board defaults(bool wide)=>wide?Board(8,4,const [Tile('clock','clock',0,0,5,4),Tile('date','date',5,0,3,2)]):Board(4,8,const [Tile('clock','clock',0,0,4,4),Tile('date','date',0,4,4,2)]);
+  static Board preset(bool wide, String kind) {
+    final kinds = switch(kind) {
+      'work' => ['clock','agenda','tasks','memo'],
+      'desk' => ['clock','date','weather','battery'],
+      'photo' => ['photo','clock','date','dday'],
+      _ => <String>[],
+    };
+    if(kinds.isEmpty) return defaults(wide);
+    return Board(wide?8:4,wide?4:8,[
+      for(var i=0;i<kinds.length;i++)
+        Tile('preset_${kinds[i]}',kinds[i],wide?(i%2)*4:0,wide?(i~/2)*2:i*2,4,2),
+    ]);
+  }
   static Board restore(String? raw,bool wide){
     final fallback=defaults(wide);
     if(raw==null)return fallback;
