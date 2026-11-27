@@ -124,12 +124,14 @@ class CalendarService {
   }
   Future<void> saveSelected(SharedPreferences prefs,List<String> ids) async {
     await prefs.setStringList(selectedKey,ids.toSet().toList());
+    await prefs.remove(cacheKey);
+    await prefs.remove(cacheTimeKey);
     changes.value++;
   }
   Future<List<CalendarEvent>> refresh(SharedPreferences prefs) async {
     final token=await _token();
     final ids=selected(prefs);
-    if(ids.isEmpty) return cached(prefs);
+    if(ids.isEmpty) return [];
     final today=DateTime.now();
     final from=DateTime(today.year,today.month,today.day);
     final to=from.add(const Duration(days:30));
@@ -154,6 +156,7 @@ class CalendarService {
     }
     output.sort((a,b)=>a.start.compareTo(b.start));
     // Event summaries remain on this device only; excluded from export/backup.
+    if(account==null || selected(prefs).join('\n')!=ids.join('\n')) return [];
     await prefs.setString(cacheKey,jsonEncode(output.map((e)=>e.toJson()).toList()));
     await prefs.setString(cacheTimeKey,DateTime.now().toIso8601String());
     changes.value++;
