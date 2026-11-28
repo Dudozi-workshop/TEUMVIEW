@@ -6,9 +6,10 @@ import 'skin.dart';
 typedef VerifySkinPurchase = Future<bool> Function(PurchaseDetails purchase);
 
 class SkinBilling extends ChangeNotifier {
-  SkinBilling({required this.verify, InAppPurchase? store})
+  SkinBilling({required this.verify, this.checkoutEnabled = false, InAppPurchase? store})
       : store = store ?? InAppPurchase.instance;
   final VerifySkinPurchase verify;
+  final bool checkoutEnabled;
   final InAppPurchase store;
   final Set<String> _owned = {};
   Set<String> get owned => Set.unmodifiable(_owned);
@@ -35,12 +36,12 @@ class SkinBilling extends ChangeNotifier {
   }
 
   Future<bool> buy(ProductDetails product) async {
-    if (!available || !SkinStyle.premiumProducts.containsValue(product.id)) return false;
+    if (!checkoutEnabled || !available || !SkinStyle.premiumProducts.containsValue(product.id)) return false;
     return store.buyNonConsumable(purchaseParam: PurchaseParam(productDetails: product));
   }
 
   Future<void> restore() async {
-    if (available) await store.restorePurchases();
+    if (checkoutEnabled && available) await store.restorePurchases();
   }
 
   Future<void> _handle(List<PurchaseDetails> purchases) async {
