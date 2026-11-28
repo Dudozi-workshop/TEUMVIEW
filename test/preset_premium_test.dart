@@ -13,6 +13,14 @@ void main() {
       }
     }
   });
+  test('premium selection requires the matching verified product', () {
+    for(final style in SkinStyle.premiumCatalog) {
+      expect(SkinStyle.resolveEntitled(style.id,{}).id,'dark');
+      expect(SkinStyle.resolveEntitled(style.id,{'unknown'}).id,'dark');
+      expect(SkinStyle.resolveEntitled(style.id,{SkinStyle.premiumProducts[style.id]!}).id,style.id);
+    }
+    expect(SkinStyle.resolveEntitled('light',{}).id,'light');
+  });
   test('premium products are distinct from free skins', () {
     expect(SkinStyle.premiumCatalog.length,2);
     expect(SkinStyle.premiumProducts.values.toSet().length,2);
