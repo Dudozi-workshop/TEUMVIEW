@@ -37,8 +37,9 @@ class _AgendaPanelState extends State<AgendaPanel> {
       if(error!=null)Text(error!,style:Theme.of(context).textTheme.labelSmall),
       Expanded(child:events.isEmpty?Center(child:Text(!connected?'Google Calendar 연결 필요':!selected?'표시할 캘린더를 선택하세요':'예정된 일정 없음',textAlign:TextAlign.center,style:Theme.of(context).textTheme.bodySmall)):
         ListView.builder(padding:EdgeInsets.zero,itemCount:events.length,itemBuilder:(ctx,index){final e=events[index];
-          final date='${e.start.month}/${e.start.day}';
-          final hour='${e.start.hour.toString().padLeft(2,'0')}:${e.start.minute.toString().padLeft(2,'0')}';
+          final start = e.displayStart;
+          final date='${start.month}/${start.day}';
+          final hour='${start.hour.toString().padLeft(2,'0')}:${start.minute.toString().padLeft(2,'0')}';
           return Padding(padding:const EdgeInsets.symmetric(vertical:3),child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
             SizedBox(width:72,child:Text('$date ${e.allDay?'종일':hour}',style:Theme.of(context).textTheme.labelSmall)),
             Expanded(child:Text(e.title,maxLines:2,overflow:TextOverflow.ellipsis))]));
