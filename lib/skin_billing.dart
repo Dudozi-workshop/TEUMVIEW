@@ -37,11 +37,28 @@ class SkinBilling extends ChangeNotifier {
 
   Future<bool> buy(ProductDetails product) async {
     if (!checkoutEnabled || !available || !SkinStyle.premiumProducts.containsValue(product.id)) return false;
-    return store.buyNonConsumable(purchaseParam: PurchaseParam(productDetails: product));
+    try {
+      error = null;
+      final started = await store.buyNonConsumable(purchaseParam: PurchaseParam(productDetails: product));
+      if (!started) error = '구매 요청 실패';
+      _changed();
+      return started;
+    } catch (_) {
+      error = '구매 요청 실패';
+      _changed();
+      return false;
+    }
   }
 
   Future<void> restore() async {
-    if (checkoutEnabled && available) await store.restorePurchases();
+    if (!checkoutEnabled || !available) return;
+    try {
+      error = null;
+      await store.restorePurchases();
+    } catch (_) {
+      error = '구매 복원 요청 실패';
+    }
+    _changed();
   }
 
   Future<void> _handle(List<PurchaseDetails> purchases) async {
