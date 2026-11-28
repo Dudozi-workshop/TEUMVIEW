@@ -23,3 +23,9 @@ jobs:
           name: teumview-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
+      - run: flutter build apk --debug --target-platform android-arm64 --split-per-abi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: teumview-arm64-qa
+          path: build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk
+          if-no-files-found: error
