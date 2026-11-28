@@ -124,24 +124,46 @@ class _DashboardState extends State<Dashboard> {
   void commit(bool wide,Board? b){if(b!=null&&b.encode()==boards[wide]!.encode())return;if(b==null){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('배치 공간이 부족하거나 다른 위젯과 겹칩니다.'),duration:Duration(seconds:1)));return;}undo[wide]!.add(boards[wide]!);redo[wide]!.clear();save(wide,b);}
   void history(bool wide,bool back){final from=(back?undo:redo)[wide]!;final to=(back?redo:undo)[wide]!;if(from.isEmpty)return;to.add(boards[wide]!);save(wide,from.removeLast());}
   void add(bool wide,String kind){final b=boards[wide]!;for(var y=0;y<b.rows;y++){for(var x=0;x<b.cols;x++){final t=Tile(DateTime.now().microsecondsSinceEpoch.toString(),kind,x,y,2,2);final next=b.put(t);if(next!=null){commit(wide,next);return;}}}ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('위젯을 추가할 공간이 없습니다.')));}
-  String two(int n)=>n.toString().padLeft(2,'0');
+  void finishEditing() {
+    setState(() {
+      editing = false;
+      selected = null;
+      preview = null;
+      for (final history in [...undo.values, ...redo.values]) {
+        history.clear();
+      }
+    });
+  }
+
   @override
-  Widget build(BuildContext context)=>Scaffold(body:Stack(fit:StackFit.expand,children:[if(widget.photo!=null) Image.file(File(widget.photo!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink()),if(widget.photo!=null) const ColoredBox(color:Color(0x55000000)),SafeArea(child:LayoutBuilder(builder:(context,outer){
+  Widget build(BuildContext context) => PopScope<void>(
+    canPop: !editing,
+    onPopInvokedWithResult: (didPop, _) {
+      if (!didPop && editing) finishEditing();
+    },
+    child: Scaffold(body:Stack(fit:StackFit.expand,children:[if(widget.photo!=null) Image.file(File(widget.photo!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink()),if(widget.photo!=null) const ColoredBox(color:Color(0x55000000)),SafeArea(child:LayoutBuilder(builder:(context,outer){
     final wide=outer.maxWidth>outer.maxHeight;
     final b=boards[wide]!;
     return Column(children:[if(editing) SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
-      TextButton(onPressed:()=>setState((){editing=false;selected=null;preview=null;undo[false]!.clear();undo[true]!.clear();redo[false]!.clear();redo[true]!.clear();}),child:const Text('완료')),
+      TextButton(onPressed:finishEditing,child:const Text('완료')),
       IconButton(tooltip:'실행 취소',onPressed:undo[wide]!.isEmpty?null:()=>history(wide,true),icon:const Icon(Icons.undo)),
       IconButton(tooltip:'다시 실행',onPressed:redo[wide]!.isEmpty?null:()=>history(wide,false),icon:const Icon(Icons.redo)),
       IconButton(tooltip:'위젯 추가',onPressed:() async {final kind=await showModalBottomSheet<String>(context:context,isScrollControlled:true,builder:(_)=>const WidgetPicker());if(kind!=null&&mounted)add(wide,kind);},icon:const Icon(Icons.add)),
       PopupMenuButton<String>(tooltip:'대시보드',onSelected:(id)async{if(id=='rename'){await renameBoard();}else if(id=='delete'){await deleteBoard();}else if(id=='+'){await store.create();await switchBoard(store.active);}else{await switchBoard(id);}},itemBuilder:(_)=>[for(final id in store.ids) PopupMenuItem(value:id,child:Text('${store.name(id)}${id==active?" ✓":""}')),const PopupMenuItem(value:'+',child:Text('새 대시보드')),const PopupMenuItem(value:'rename',child:Text('이름 변경')),if(store.ids.length>1)const PopupMenuItem(value:'delete',child:Text('삭제'))],icon:const Icon(Icons.dashboard_customize)),
       IconButton(tooltip:'설정',onPressed:widget.onSettings,icon:const Icon(Icons.settings)),
       IconButton(tooltip:'추천 템플릿',icon:const Icon(Icons.space_dashboard_outlined),onPressed:()async{
-        final choice=await showModalBottomSheet<String>(context:context,builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-          const ListTile(title:Text('현재 방향의 배치를 변경합니다. 실행 취소 가능')),
-          for(final entry in const {'desk':'탁상 디스플레이','work':'업무 일정','photo':'사진 중심'}.entries)
-            ListTile(title:Text(entry.value),onTap:()=>Navigator.pop(ctx,entry.key)),
-        ])));
+        final choice = await showModalBottomSheet<String>(
+          context: context,
+          isScrollControlled: true,
+          builder: (ctx) => SafeArea(child: ListView(
+            shrinkWrap: true,
+            children: [
+              const ListTile(title: Text('현재 방향의 배치를 변경합니다. 실행 취소 가능')),
+              for (final entry in const {'desk':'탁상 디스플레이','work':'업무 일정','photo':'사진 중심'}.entries)
+                ListTile(title: Text(entry.value), onTap: () => Navigator.pop(ctx, entry.key)),
+            ],
+          )),
+        );
         if(choice==null||!mounted)return;
         final p=Board.preset(wide,choice);
         commit(wide,Board(p.cols,p.rows,p.tiles.map((t)=>Tile('${active}_${wide}_${DateTime.now().microsecondsSinceEpoch}_${t.id}',t.kind,t.x,t.y,t.w,t.h)).toList()));
@@ -155,7 +177,7 @@ class _DashboardState extends State<Dashboard> {
         if(editing&&preview!=null&&preview!.w>0&&preview!.h>0) Positioned(left:preview!.x*cw,top:preview!.y*ch,width:preview!.w*cw,height:preview!.h*ch,child:IgnorePointer(child:Container(decoration:BoxDecoration(color:(b.fits(preview!)?Colors.green:Colors.red).withAlpha(45),border:Border.all(color:b.fits(preview!)?Colors.green:Colors.red,width:2)))))
       ]));
     }))) ]);
-  }))]));
+  }))])));
 }
 class TileView extends StatefulWidget {
   const TileView({super.key,required this.tile,required this.editing,required this.selected,required this.surface,required this.radius,required this.content,required this.onSelect,required this.onMove,required this.onResize,required this.onPreview,required this.onDelete});
