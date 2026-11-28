@@ -28,6 +28,19 @@ class Board {
       _ => <String>[],
     };
     if(kinds.isEmpty) return defaults(wide);
+    if (kind == 'desk') {
+      return wide ? Board(8, 4, const [
+        Tile('preset_clock', 'clock', 0, 0, 4, 4),
+        Tile('preset_date', 'date', 4, 0, 4, 2),
+        Tile('preset_weather', 'weather', 4, 2, 2, 2),
+        Tile('preset_battery', 'battery', 6, 2, 2, 2),
+      ]) : Board(4, 8, const [
+        Tile('preset_clock', 'clock', 0, 0, 4, 3),
+        Tile('preset_date', 'date', 0, 3, 4, 2),
+        Tile('preset_weather', 'weather', 0, 5, 2, 3),
+        Tile('preset_battery', 'battery', 2, 5, 2, 3),
+      ]);
+    }
     return Board(wide?8:4,wide?4:8,[
       for(var i=0;i<kinds.length;i++)
         Tile('preset_${kinds[i]}',kinds[i],wide?(i%2)*4:0,wide?(i~/2)*2:i*2,4,2),

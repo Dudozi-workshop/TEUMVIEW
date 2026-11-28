@@ -25,6 +25,8 @@ class CalendarEvent {
     return CalendarEvent(id: '${json['id'] ?? ''}', calendarId: calendarId,
       title: '${json['summary'] ?? '제목 없음'}', start: start, end: end, allDay: allDay);
   }
+  DateTime get displayStart => allDay ? start : start.toLocal();
+
   Map<String, dynamic> toJson() => {'id':id,'calendarId':calendarId,'title':title,
     'start':start.toIso8601String(),'end':end.toIso8601String(),'allDay':allDay};
   static CalendarEvent? fromCache(dynamic item) {

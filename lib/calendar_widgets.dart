@@ -28,22 +28,66 @@ class _AgendaPanelState extends State<AgendaPanel> {
     final events=service.cached(widget.prefs).where((e)=>e.start.isBefore(end)&&e.end.isAfter(now)).take(6).toList();
     final connected=service.account!=null;
     final selected=service.selected(widget.prefs).isNotEmpty;
-    return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      Row(children:[Text('일정',style:Theme.of(context).textTheme.labelSmall),const Spacer(),
-        if(busy)const SizedBox(width:12,height:12,child:CircularProgressIndicator(strokeWidth:1.5)),
-        if(!widget.editing) IconButton(tooltip:'일정 갱신',visualDensity:VisualDensity.compact,onPressed:connected&&selected?update:null,icon:const Icon(Icons.refresh,size:18)),
-        if(!widget.editing)IconButton(tooltip:'캘린더 설정',visualDensity:VisualDensity.compact,onPressed:()=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>CalendarSettingsPage(prefs:widget.prefs))),icon:const Icon(Icons.tune,size:18)),
-      ]),
-      if(error!=null)Text(error!,style:Theme.of(context).textTheme.labelSmall),
-      Expanded(child:events.isEmpty?Center(child:Text(!connected?'Google Calendar 연결 필요':!selected?'표시할 캘린더를 선택하세요':'예정된 일정 없음',textAlign:TextAlign.center,style:Theme.of(context).textTheme.bodySmall)):
-        ListView.builder(padding:EdgeInsets.zero,itemCount:events.length,itemBuilder:(ctx,index){final e=events[index];
-          final date='${e.start.month}/${e.start.day}';
-          final hour='${e.start.hour.toString().padLeft(2,'0')}:${e.start.minute.toString().padLeft(2,'0')}';
-          return Padding(padding:const EdgeInsets.symmetric(vertical:3),child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-            SizedBox(width:72,child:Text('$date ${e.allDay?'종일':hour}',style:Theme.of(context).textTheme.labelSmall)),
-            Expanded(child:Text(e.title,maxLines:2,overflow:TextOverflow.ellipsis))]));
-        })),
-    ]);
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final emptyText = !connected ? '캘린더 연결' : !selected ? '캘린더 선택' : '예정된 일정 없음';
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    String timeLabel(CalendarEvent event) {
+      final start = event.displayStart;
+      final day = DateTime(start.year, start.month, start.day);
+      final date = day == today ? '오늘' : day == tomorrow ? '내일' : '${start.month}/${start.day}';
+      final time = event.allDay ? '종일' : '${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}';
+      return '$date · $time';
+    }
+    void openSettings() {
+      Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => CalendarSettingsPage(prefs: widget.prefs),
+      ));
+    }
+    Widget menu({Widget? child}) => PopupMenuButton<String>(
+      tooltip: '일정 옵션',
+      padding: EdgeInsets.zero,
+      onSelected: (value) {
+        if (value == 'refresh') update();
+        if (value == 'settings') openSettings();
+      },
+      itemBuilder: (_) => [
+        PopupMenuItem(value: 'refresh', enabled: connected && selected && !busy, child: const Text('일정 갱신')),
+        const PopupMenuItem(value: 'settings', child: Text('캘린더 설정')),
+      ],
+      child: child,
+    );
+    return LayoutBuilder(builder: (context, size) {
+      if (size.maxHeight < 70 || size.maxWidth < 100) {
+        final summary = Align(alignment: Alignment.centerLeft, child: Text(
+          events.isEmpty ? emptyText : '${timeLabel(events.first)}  ${events.first.title}',
+          maxLines: 2, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodyMedium,
+        ));
+        return widget.editing ? summary : menu(child: summary);
+      }
+      return ListView(padding: EdgeInsets.zero, children: [
+        Row(children: [
+          Expanded(child: Text('일정', style: theme.textTheme.labelMedium?.copyWith(color: colors.onSurfaceVariant))),
+          if (busy) const SizedBox.square(dimension: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+          if (!widget.editing) SizedBox(width: 44, height: 36, child: menu()),
+        ]),
+        if (error != null) Text(error!, style: theme.textTheme.bodySmall),
+        if (events.isEmpty)
+          Align(alignment: Alignment.centerLeft, child: !widget.editing && (!connected || !selected)
+              ? TextButton(onPressed: openSettings, child: Text(emptyText))
+              : Text(emptyText, style: theme.textTheme.bodyMedium))
+        else for (var i = 0; i < events.length; i++)
+          Padding(padding: const EdgeInsets.only(bottom: 8), child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(timeLabel(events[i]), style: theme.textTheme.labelMedium?.copyWith(color: colors.primary)),
+              Text(events[i].title, maxLines: 2, overflow: TextOverflow.ellipsis,
+                style: i == 0 ? theme.textTheme.titleLarge : theme.textTheme.bodyMedium),
+            ],
+          )),
+      ]);
+    });
   }
 }
 

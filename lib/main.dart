@@ -67,7 +67,17 @@ class _TeumviewState extends State<Teumview> {
     final surface = style.surface;
     return MaterialApp(debugShowCheckedModeBanner: false, theme: style.theme().copyWith(textTheme:style.theme().textTheme.apply(fontFamily:effective.font=='system'?null:effective.font)), builder:(context,child)=>MediaQuery(data:MediaQuery.of(context).copyWith(textScaler:TextScaler.linear(effective.scale)),child:child!), home: Builder(builder: (context) => Dashboard(key:ValueKey(revision), prefs: widget.prefs, surface: surface.withOpacity(style.cardOpacity), radius:style.radius, photo:effective.photo, burnin:burnin, lowPower:lowPower, onSettings: () => showModalBottomSheet<void>(context: context, builder: (context) => StatefulBuilder(builder: (context, update) => SafeArea(child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [const ListTile(title: Text('설정',style:TextStyle(fontSize:22,fontWeight:FontWeight.w600))),const SettingsSection('디스플레이'),
 SwitchListTile(title:const Text('저전력 모드'),subtitle:const Text('시계 갱신을 분 단위로 변경'),value:lowPower,onChanged:(v){setState(()=>lowPower=v);update((){});widget.prefs.setBool('low_power',v);}),
-ListTile(title:Text(brightness==null?'시스템 밝기':'화면 밝기 ${(brightness!*100).round()}%'),subtitle:Slider(min:0.05,max:1,value:brightness??0.5,onChanged:(v){setState(()=>brightness=v);update((){});},onChangeEnd:(v)async{await widget.prefs.setDouble('brightness',v);await applyBrightness();}),trailing:IconButton(tooltip:'시스템 밝기 복원',icon:const Icon(Icons.restart_alt),onPressed:()async{setState(()=>brightness=null);update((){});await widget.prefs.remove('brightness');await applyBrightness();})), const SettingsSection('스킨'),ListTile(title:const Text('사용자 스킨'),onTap:()async{final result=await showModalBottomSheet<CustomSkin>(context:context,isScrollControlled:true,builder:(_)=>CustomSkinEditor(initial:custom));if(result!=null&&mounted){await widget.prefs.setString('custom_skin',result.encode());if(mounted)setState(()=>custom=result);}}), const SettingsSection('화면 보호'),SwitchListTile(title:const Text('번인 완화 위치 이동'),value:burnin,onChanged:(v){setState(()=>burnin=v);update((){});widget.prefs.setBool('burnin',v);}), const SettingsSection('외부 연동'),ListTile(title:const Text('Google Calendar'),subtitle:const Text('읽기 전용 · 일정 연동'),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>CalendarSettingsPage(prefs:widget.prefs)))), const SettingsSection('데이터 관리'),ListTile(title:const Text('백업 파일 저장'),onTap:()async{try{final raw=await FileBackup(store).export();await FilePicker.platform.saveFile(fileName:'teumview_backup.json',type:FileType.custom,allowedExtensions:['json'],bytes:Uint8List.fromList(utf8.encode(raw)));}catch(_){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('백업 실패')));}}), ListTile(title:const Text('백업 파일 복원'),onTap:()async{final confirmed=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('현재 설정을 덮어쓸까요?'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('취소')),TextButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('복원'))]));if(confirmed!=true||!context.mounted)return;try{final result=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['json']);if(result==null)return;final path=result.files.single.path;if(path==null)throw const FormatException();final file=File(path);if(await file.length()>FileBackup.maxBytes*2)throw const FormatException();await FileBackup(store).restore(await file.readAsString());if(!mounted)return;setState((){revision++;brightness=widget.prefs.getDouble('brightness');lowPower=widget.prefs.getBool('low_power')??false;custom=CustomSkin.decode(widget.prefs.getString('custom_skin'));skin=Skin.values.firstWhere((s)=>s.name==widget.prefs.getString('skin'),orElse:()=>Skin.dark);night=widget.prefs.getBool('night')??false;awake=widget.prefs.getBool('awake')??false;burnin=widget.prefs.getBool('burnin')??false;});await applyBrightness();WakelockPlus.toggle(enable:awake);if(context.mounted)Navigator.pop(context);}catch(_){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('복원 실패')));}}), const SettingsSection('기본 스킨'),for (final option in Skin.values) RadioListTile<Skin>(title: Text(SkinStyle.resolve(option.name).label), secondary: SkinPreview(style: SkinStyle.resolve(option.name)), value: option, groupValue: skin, onChanged: (value) { if (value == null) return; setState(() => skin = value); update(() {}); widget.prefs.setString('skin', value.name); }), const SettingsSection('프리미엄 스킨'),for(final premium in SkinStyle.premiumCatalog) ListTile(leading:SkinPreview(style:premium),title:Text(premium.label),subtitle:const Text('미리보기 · 출시 준비 중'),trailing:const Icon(Icons.lock_outline),onTap:()=>showDialog<void>(context:context,builder:(ctx)=>AlertDialog(title:Text(premium.label),content:Column(mainAxisSize:MainAxisSize.min,children:[SkinPreview(style:premium),const SizedBox(height:12),const Text('영구 구매 상품으로 출시 예정입니다. 현재 결제는 지원하지 않습니다.')]),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('닫기')),FilledButton(onPressed:(){Navigator.pop(ctx);Navigator.push(context,MaterialPageRoute(builder:(_)=>PremiumSkinDemo(style:premium)));},child:const Text('전체 화면 미리보기'))]))),const SettingsSection('화면 유지'),SwitchListTile(title: const Text('야간 OLED 모드 (22:00–07:00)'),value:night,onChanged:(value){setState(()=>night=value);update((){});widget.prefs.setBool('night',value);}), SwitchListTile(title: const Text('화면 항상 켜기'), value: awake, onChanged: (value) { setState(() => awake = value); update(() {}); widget.prefs.setBool('awake', value); WakelockPlus.toggle(enable: value); })]))))))));
+ListTile(title:Text(brightness==null?'시스템 밝기':'화면 밝기 ${(brightness!*100).round()}%'),subtitle:Slider(min:0.05,max:1,value:brightness??0.5,onChanged:(v){setState(()=>brightness=v);update((){});},onChangeEnd:(v)async{await widget.prefs.setDouble('brightness',v);await applyBrightness();}),trailing:IconButton(tooltip:'시스템 밝기 복원',icon:const Icon(Icons.restart_alt),onPressed:()async{setState(()=>brightness=null);update((){});await widget.prefs.remove('brightness');await applyBrightness();})), const SettingsSection('스킨'),ListTile(title:const Text('사용자 스킨'),onTap:()async{final result=await showModalBottomSheet<CustomSkin>(context:context,isScrollControlled:true,builder:(_)=>CustomSkinEditor(initial:custom));if(result!=null&&mounted){await widget.prefs.setString('custom_skin',result.encode());if(mounted)setState(()=>custom=result);}}), const SettingsSection('화면 보호'),SwitchListTile(title:const Text('번인 완화 위치 이동'),value:burnin,onChanged:(v){setState(()=>burnin=v);update((){});widget.prefs.setBool('burnin',v);}), const SettingsSection('외부 연동'),ListTile(title:const Text('Google Calendar'),subtitle:const Text('읽기 전용 · 일정 연동'),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>CalendarSettingsPage(prefs:widget.prefs)))), const SettingsSection('데이터 관리'),ListTile(title:const Text('백업 파일 저장'),onTap:()async{try{final raw=await FileBackup(store).export();await FilePicker.platform.saveFile(fileName:'teumview_backup.json',type:FileType.custom,allowedExtensions:['json'],bytes:Uint8List.fromList(utf8.encode(raw)));}catch(_){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('백업 실패')));}}), ListTile(title:const Text('백업 파일 복원'),onTap:()async{final confirmed=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('현재 설정을 덮어쓸까요?'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('취소')),TextButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('복원'))]));if(confirmed!=true||!context.mounted)return;try{final result=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['json']);if(result==null)return;final path=result.files.single.path;if(path==null)throw const FormatException();final file=File(path);if(await file.length()>FileBackup.maxBytes*2)throw const FormatException();await FileBackup(store).restore(await file.readAsString());if(!mounted)return;setState((){revision++;brightness=widget.prefs.getDouble('brightness');lowPower=widget.prefs.getBool('low_power')??false;custom=CustomSkin.decode(widget.prefs.getString('custom_skin'));skin=Skin.values.firstWhere((s)=>s.name==widget.prefs.getString('skin'),orElse:()=>Skin.dark);night=widget.prefs.getBool('night')??false;awake=widget.prefs.getBool('awake')??false;burnin=widget.prefs.getBool('burnin')??false;});await applyBrightness();WakelockPlus.toggle(enable:awake);if(context.mounted)Navigator.pop(context);}catch(_){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('복원 실패')));}}), const SettingsSection('기본 스킨'),for (final option in Skin.values) RadioListTile<Skin>(title: Text(SkinStyle.resolve(option.name).label), secondary: SkinPreview(style: SkinStyle.resolve(option.name)), value: option, groupValue: skin, onChanged: (value) { if (value == null) return; setState(() => skin = value); update(() {}); widget.prefs.setString('skin', value.name); }), const SettingsSection('프리미엄 스킨'),for (final premium in SkinStyle.premiumCatalog)
+  ListTile(
+    leading: SkinPreview(style: premium),
+    title: Text(premium.label),
+    subtitle: const Text('전체 화면 미리보기'),
+    trailing: const Icon(Icons.chevron_right),
+    onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => PremiumSkinDemo(style: premium),
+    )),
+  ),
+const SettingsSection('화면 유지'),SwitchListTile(title: const Text('야간 OLED 모드 (22:00–07:00)'),value:night,onChanged:(value){setState(()=>night=value);update((){});widget.prefs.setBool('night',value);}), SwitchListTile(title: const Text('화면 항상 켜기'), value: awake, onChanged: (value) { setState(() => awake = value); update(() {}); widget.prefs.setBool('awake', value); WakelockPlus.toggle(enable: value); })]))))))));
   }
 }
 
@@ -107,56 +117,131 @@ class _DashboardState extends State<Dashboard> {
   DateTime now=DateTime.now();
   Timer? timer;
   @override
-  void initState(){super.initState();if(!(widget.prefs.getBool('intro_seen')??false)){WidgetsBinding.instance.addPostFrameCallback((_)async{if(!mounted)return;await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(title:const Text('나만의 대시보드, 틈뷰'),content:const Text('화면을 길게 누르면 편집할 수 있어요. 추천 템플릿에서 시작하거나 위젯을 자유롭게 배치해 보세요.'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('시작하기'))]));await widget.prefs.setBool('intro_seen',true);});}timer=Timer.periodic(const Duration(seconds:1),(_){if(mounted){final next=DateTime.now();if(!widget.lowPower||next.minute!=now.minute||next.hour!=now.hour||next.day!=now.day)setState(()=>now=next);}});}
+  void initState() {
+    super.initState();
+    if (!(widget.prefs.getBool('intro_seen') ?? false)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        // Older installations may have saved a layout before onboarding existed.
+        if (!widget.prefs.containsKey(store.key(active, false)) &&
+            !widget.prefs.containsKey(store.key(active, true))) {
+          await chooseTemplate(firstRun: true);
+        }
+        if (mounted) await widget.prefs.setBool('intro_seen', true);
+      });
+    }
+    timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      final next = DateTime.now();
+      if (!widget.lowPower || next.minute != now.minute ||
+          next.hour != now.hour || next.day != now.day) {
+        setState(() => now = next);
+      }
+    });
+  }
+
+  Future<void> chooseTemplate({bool firstRun = false}) async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => SafeArea(child: ListView(
+        padding: const EdgeInsets.only(bottom: 8),
+        shrinkWrap: true,
+        children: [
+          ListTile(
+            title: Text(firstRun ? '어떤 대시보드로 시작할까요?' : '추천 템플릿'),
+            subtitle: Text(firstRun ? '카드를 길게 누르면 언제든 편집할 수 있어요.' : '현재 방향의 배치를 바꿉니다. 실행 취소할 수 있어요.'),
+          ),
+          for (final (key, label, icon) in const [
+            ('desk', '탁상 디스플레이', Icons.schedule),
+            ('work', '업무 일정', Icons.event_note),
+            ('photo', '사진 중심', Icons.photo_outlined),
+          ])
+            ListTile(
+              leading: Icon(icon),
+              title: Text(label),
+              subtitle: Text(Board.preset(false, key).tiles.map((t) => widgetLabels[t.kind]!).join(' · ')),
+              onTap: () => Navigator.pop(ctx, key),
+            ),
+          if (firstRun) TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('기본 시계로 시작'),
+          ),
+        ],
+      )),
+    );
+    if (choice == null || !mounted) return;
+    final size = MediaQuery.sizeOf(context);
+    final padding = MediaQuery.paddingOf(context);
+    final wide = size.width - padding.horizontal > size.height - padding.vertical;
+    final preset = Board.preset(wide, choice);
+    final prefix = '${active}_${wide}_${DateTime.now().microsecondsSinceEpoch}';
+    commit(wide, Board(preset.cols, preset.rows, [
+      for (final tile in preset.tiles)
+        Tile('${prefix}_${tile.id}', tile.kind, tile.x, tile.y, tile.w, tile.h),
+    ]));
+    setState(() {
+      editing = true;
+      selected = null;
+      preview = null;
+    });
+  }
+
   @override
   void dispose(){timer?.cancel();super.dispose();}
   void save(bool wide,Board b){setState(()=>boards[wide]=b);widget.prefs.setString(store.key(active,wide),b.encode());}
   void commit(bool wide,Board? b){if(b!=null&&b.encode()==boards[wide]!.encode())return;if(b==null){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('배치 공간이 부족하거나 다른 위젯과 겹칩니다.'),duration:Duration(seconds:1)));return;}undo[wide]!.add(boards[wide]!);redo[wide]!.clear();save(wide,b);}
   void history(bool wide,bool back){final from=(back?undo:redo)[wide]!;final to=(back?redo:undo)[wide]!;if(from.isEmpty)return;to.add(boards[wide]!);save(wide,from.removeLast());}
   void add(bool wide,String kind){final b=boards[wide]!;for(var y=0;y<b.rows;y++){for(var x=0;x<b.cols;x++){final t=Tile(DateTime.now().microsecondsSinceEpoch.toString(),kind,x,y,2,2);final next=b.put(t);if(next!=null){commit(wide,next);return;}}}ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('위젯을 추가할 공간이 없습니다.')));}
-  String two(int n)=>n.toString().padLeft(2,'0');
+  void finishEditing() {
+    setState(() {
+      editing = false;
+      selected = null;
+      preview = null;
+      for (final history in [...undo.values, ...redo.values]) {
+        history.clear();
+      }
+    });
+  }
+
   @override
-  Widget build(BuildContext context)=>Scaffold(body:Stack(fit:StackFit.expand,children:[if(widget.photo!=null) Image.file(File(widget.photo!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink()),if(widget.photo!=null) const ColoredBox(color:Color(0x55000000)),SafeArea(child:LayoutBuilder(builder:(context,outer){
+  Widget build(BuildContext context) => PopScope<void>(
+    canPop: !editing,
+    onPopInvokedWithResult: (didPop, _) {
+      if (!didPop && editing) finishEditing();
+    },
+    child: Scaffold(body:Stack(fit:StackFit.expand,children:[if(widget.photo!=null) Image.file(File(widget.photo!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink()),if(widget.photo!=null) const ColoredBox(color:Color(0x55000000)),SafeArea(child:LayoutBuilder(builder:(context,outer){
     final wide=outer.maxWidth>outer.maxHeight;
     final b=boards[wide]!;
     return Column(children:[if(editing) SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
-      TextButton(onPressed:()=>setState((){editing=false;selected=null;preview=null;undo[false]!.clear();undo[true]!.clear();redo[false]!.clear();redo[true]!.clear();}),child:const Text('완료')),
+      TextButton(onPressed:finishEditing,child:const Text('완료')),
       IconButton(tooltip:'실행 취소',onPressed:undo[wide]!.isEmpty?null:()=>history(wide,true),icon:const Icon(Icons.undo)),
       IconButton(tooltip:'다시 실행',onPressed:redo[wide]!.isEmpty?null:()=>history(wide,false),icon:const Icon(Icons.redo)),
       IconButton(tooltip:'위젯 추가',onPressed:() async {final kind=await showModalBottomSheet<String>(context:context,isScrollControlled:true,builder:(_)=>const WidgetPicker());if(kind!=null&&mounted)add(wide,kind);},icon:const Icon(Icons.add)),
       PopupMenuButton<String>(tooltip:'대시보드',onSelected:(id)async{if(id=='rename'){await renameBoard();}else if(id=='delete'){await deleteBoard();}else if(id=='+'){await store.create();await switchBoard(store.active);}else{await switchBoard(id);}},itemBuilder:(_)=>[for(final id in store.ids) PopupMenuItem(value:id,child:Text('${store.name(id)}${id==active?" ✓":""}')),const PopupMenuItem(value:'+',child:Text('새 대시보드')),const PopupMenuItem(value:'rename',child:Text('이름 변경')),if(store.ids.length>1)const PopupMenuItem(value:'delete',child:Text('삭제'))],icon:const Icon(Icons.dashboard_customize)),
       IconButton(tooltip:'설정',onPressed:widget.onSettings,icon:const Icon(Icons.settings)),
-      IconButton(tooltip:'추천 템플릿',icon:const Icon(Icons.space_dashboard_outlined),onPressed:()async{
-        final choice=await showModalBottomSheet<String>(context:context,builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-          const ListTile(title:Text('현재 방향의 배치를 변경합니다. 실행 취소 가능')),
-          for(final entry in const {'desk':'탁상 디스플레이','work':'업무 일정','photo':'사진 중심'}.entries)
-            ListTile(title:Text(entry.value),onTap:()=>Navigator.pop(ctx,entry.key)),
-        ])));
-        if(choice==null||!mounted)return;
-        final p=Board.preset(wide,choice);
-        commit(wide,Board(p.cols,p.rows,p.tiles.map((t)=>Tile('${active}_${wide}_${DateTime.now().microsecondsSinceEpoch}_${t.id}',t.kind,t.x,t.y,t.w,t.h)).toList()));
-      }),
+      IconButton(tooltip:'추천 템플릿', icon:const Icon(Icons.space_dashboard_outlined), onPressed:() => chooseTemplate()),
       IconButton(tooltip:'배치 초기화',onPressed:()=>commit(wide,Board(boards[wide]!.cols,boards[wide]!.rows,Board.defaults(wide).tiles.map((t)=>active=='default'?t:Tile('${active}_${t.id}',t.kind,t.x,t.y,t.w,t.h)).toList())),icon:const Icon(Icons.restart_alt)),
     ])),Expanded(child:Padding(padding:EdgeInsets.fromLTRB(8+(widget.burnin&&!editing?now.minute%3*2.0:0),8,8,8+(widget.burnin&&!editing?now.minute%3*2.0:0)),child:LayoutBuilder(builder:(context,c){
       final cw=c.maxWidth/b.cols,ch=c.maxHeight/b.rows;
       return GestureDetector(behavior:HitTestBehavior.opaque,onLongPress:()=>setState(()=>editing=true),child:Stack(fit:StackFit.expand,children:[
         if(editing) for(var y=0;y<b.rows;y++)for(var x=0;x<b.cols;x++) Positioned(left:x*cw,top:y*ch,width:cw,height:ch,child:IgnorePointer(child:Container(margin:const EdgeInsets.all(2),decoration:BoxDecoration(border:Border.all(color:Theme.of(context).dividerColor.withAlpha(60)))))),
-        for(final t in b.tiles) Positioned(key:ValueKey(t.id),left:t.x*cw,top:t.y*ch,width:t.w*cw,height:t.h*ch,child:TileView(tile:t,editing:editing,selected:selected==t.id,surface:widget.surface,radius:widget.radius,content:DashboardContent(key:ValueKey(t.id),tile:t,prefs:widget.prefs,now:now,editing:editing),onSelect:()=>setState(()=>selected=t.id),onPreview:(d,resize)=>setState(()=>preview=d==null?null:resize?t.change(w:t.w+(d.dx/cw).round(),h:t.h+(d.dy/ch).round()):t.change(x:t.x+(d.dx/cw).round(),y:t.y+(d.dy/ch).round())),onMove:(d)=>commit(wide,boards[wide]!.put(t.change(x:t.x+(d.dx/cw).round(),y:t.y+(d.dy/ch).round()))),onResize:(d)=>commit(wide,boards[wide]!.put(t.change(w:t.w+(d.dx/cw).round(),h:t.h+(d.dy/ch).round()))),onDelete:()=>commit(wide,boards[wide]!.remove(t.id)))),
+        for(final t in b.tiles) Positioned(key:ValueKey(t.id),left:t.x*cw,top:t.y*ch,width:t.w*cw,height:t.h*ch,child:TileView(tile:t,editing:editing,selected:selected==t.id,surface:widget.surface,radius:widget.radius,content:DashboardContent(key:ValueKey(t.id),tile:t,prefs:widget.prefs,now:now,editing:editing),onSelect:()=>setState(()=>selected=t.id),onStartEditing:()=>setState((){editing=true;selected=t.id;}),onPreview:(d,resize)=>setState(()=>preview=d==null?null:resize?t.change(w:t.w+(d.dx/cw).round(),h:t.h+(d.dy/ch).round()):t.change(x:t.x+(d.dx/cw).round(),y:t.y+(d.dy/ch).round())),onMove:(d)=>commit(wide,boards[wide]!.put(t.change(x:t.x+(d.dx/cw).round(),y:t.y+(d.dy/ch).round()))),onResize:(d)=>commit(wide,boards[wide]!.put(t.change(w:t.w+(d.dx/cw).round(),h:t.h+(d.dy/ch).round()))),onDelete:()=>commit(wide,boards[wide]!.remove(t.id)))),
         if(editing&&preview!=null&&preview!.w>0&&preview!.h>0) Positioned(left:preview!.x*cw,top:preview!.y*ch,width:preview!.w*cw,height:preview!.h*ch,child:IgnorePointer(child:Container(decoration:BoxDecoration(color:(b.fits(preview!)?Colors.green:Colors.red).withAlpha(45),border:Border.all(color:b.fits(preview!)?Colors.green:Colors.red,width:2)))))
       ]));
     }))) ]);
-  }))]));
+  }))])));
 }
 class TileView extends StatefulWidget {
-  const TileView({super.key,required this.tile,required this.editing,required this.selected,required this.surface,required this.radius,required this.content,required this.onSelect,required this.onMove,required this.onResize,required this.onPreview,required this.onDelete});
+  const TileView({super.key,required this.tile,required this.editing,required this.selected,required this.surface,required this.radius,required this.content,required this.onSelect,required this.onStartEditing,required this.onMove,required this.onResize,required this.onPreview,required this.onDelete});
   final Tile tile;final bool editing,selected;final Color surface;final double radius;final Widget content;
-  final VoidCallback onSelect,onDelete;final ValueChanged<Offset> onMove,onResize;
+  final VoidCallback onSelect,onStartEditing,onDelete;final ValueChanged<Offset> onMove,onResize;
   final void Function(Offset?,bool) onPreview;
   @override State<TileView> createState()=>_TileViewState();
 }
 class _TileViewState extends State<TileView>{
   Offset delta=Offset.zero;
-  @override Widget build(BuildContext context)=>Padding(padding:const EdgeInsets.all(4),child:GestureDetector(onTap:widget.editing?widget.onSelect:null,onPanStart:widget.editing?(_){widget.onSelect();setState(()=>delta=Offset.zero);}:null,onPanUpdate:widget.editing?(d){delta+=d.delta;widget.onPreview(delta,false);}:null,onPanEnd:widget.editing?(_){widget.onPreview(null,false);widget.onMove(delta);setState(()=>delta=Offset.zero);}:null,onPanCancel:(){widget.onPreview(null,false);setState(()=>delta=Offset.zero);},child:Transform.translate(offset:Offset.zero,child:Container(decoration:BoxDecoration(color:widget.surface,borderRadius:BorderRadius.circular(widget.radius),border:widget.editing&&widget.selected?Border.all(color:Theme.of(context).colorScheme.primary):null),child:Stack(children:[Positioned.fill(child:LayoutBuilder(builder:(context,constraints){final shortest=constraints.biggest.shortestSide;final inset=(shortest*0.08).clamp(4.0,16.0).toDouble();return Padding(padding:EdgeInsets.all(inset),child:widget.content);})),if(widget.editing&&widget.selected)...[Positioned(top:0,right:0,child:IconButton(tooltip:'위젯 삭제',onPressed:widget.onDelete,icon:const Icon(Icons.close,size:18))),Positioned(bottom:0,right:0,child:ResizeHandle(onResize:widget.onResize,onPreview:(d)=>widget.onPreview(d,true)))]])))));
+  @override Widget build(BuildContext context)=>Padding(padding:const EdgeInsets.all(4),child:GestureDetector(onLongPress:widget.editing?null:widget.onStartEditing,onTap:widget.editing?widget.onSelect:null,onPanStart:widget.editing?(_){widget.onSelect();setState(()=>delta=Offset.zero);}:null,onPanUpdate:widget.editing?(d){delta+=d.delta;widget.onPreview(delta,false);}:null,onPanEnd:widget.editing?(_){widget.onPreview(null,false);widget.onMove(delta);setState(()=>delta=Offset.zero);}:null,onPanCancel:(){widget.onPreview(null,false);setState(()=>delta=Offset.zero);},child:Transform.translate(offset:Offset.zero,child:Container(decoration:BoxDecoration(color:widget.surface,borderRadius:BorderRadius.circular(widget.radius),border:widget.editing&&widget.selected?Border.all(color:Theme.of(context).colorScheme.primary):null),child:Stack(children:[Positioned.fill(child:LayoutBuilder(builder:(context,constraints){final shortest=constraints.biggest.shortestSide;final inset=(shortest*0.08).clamp(4.0,16.0).toDouble();return Padding(padding:EdgeInsets.all(inset),child:widget.content);})),if(widget.editing&&widget.selected)...[Positioned(top:0,right:0,child:IconButton(tooltip:'위젯 삭제',onPressed:widget.onDelete,icon:const Icon(Icons.close,size:18))),Positioned(bottom:0,right:0,child:ResizeHandle(onResize:widget.onResize,onPreview:(d)=>widget.onPreview(d,true)))]])))));
 }
 class ResizeHandle extends StatefulWidget{
   const ResizeHandle({super.key,required this.onResize,required this.onPreview});final ValueChanged<Offset> onResize;final ValueChanged<Offset?> onPreview;
@@ -216,33 +301,70 @@ class SettingsSection extends StatelessWidget {
 }
 
 class PremiumSkinDemo extends StatelessWidget {
-  const PremiumSkinDemo({super.key,required this.style});
+  const PremiumSkinDemo({super.key, required this.style});
+
   final SkinStyle style;
+
   @override
   Widget build(BuildContext context) {
-    return Theme(data:style.theme(),child:Scaffold(backgroundColor:style.background,
-      appBar:AppBar(title:Text(style.label),backgroundColor:style.background),
-      body:SafeArea(child:Padding(padding:const EdgeInsets.all(12),child:Column(children:[
-        const Text('미리보기 · 샘플 데이터'),
-        const SizedBox(height:12),
-        Expanded(flex:3,child:_tile('MONDAY','09:41',48)),
-        const SizedBox(height:8),
-        Expanded(flex:2,child:Row(children:[
-          Expanded(child:_tile('날씨','18°',32)),
-          const SizedBox(width:8),
-          Expanded(child:_tile('일정','D-7',32)),
-        ])),
-        const SizedBox(height:8),
-        Expanded(flex:2,child:_tile('오늘의 일정','09:00  미팅',22)),
-      ])))));
+    final theme = style.theme();
+    return Theme(
+      data: theme,
+      child: Scaffold(
+        appBar: AppBar(title: Text(style.label), backgroundColor: style.background),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('미리보기 · 샘플 데이터', style: theme.textTheme.labelMedium),
+                const SizedBox(height: 8),
+                Expanded(child: LayoutBuilder(builder: (_, bounds) {
+                  final clock = _tile('월요일', '09:41', 64);
+                  final details = Column(children: [
+                    Expanded(child: Row(children: [
+                      Expanded(child: _tile('날씨', '18°', 32)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _tile('디데이', 'D-7', 32)),
+                    ])),
+                    const SizedBox(height: 8),
+                    Expanded(child: _tile('오늘의 일정', '09:00  미팅', 24)),
+                  ]);
+                  if (bounds.maxWidth > bounds.maxHeight) {
+                    return Row(children: [
+                      Expanded(child: clock),
+                      const SizedBox(width: 8),
+                      Expanded(child: details),
+                    ]);
+                  }
+                  return Column(children: [
+                    Expanded(flex: 3, child: clock),
+                    const SizedBox(height: 8),
+                    Expanded(flex: 4, child: details),
+                  ]);
+                })),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
-  Widget _tile(String label,String value,double size)=>Container(
-    width:double.infinity,
-    decoration:BoxDecoration(color:style.surface.withValues(alpha:style.cardOpacity),borderRadius:BorderRadius.circular(style.radius)),
-    padding:const EdgeInsets.all(12),
-    child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
-      Text(label,style:TextStyle(color:style.accent)),
-      Flexible(child:FittedBox(fit:BoxFit.scaleDown,child:Text(value,style:TextStyle(fontSize:size,color:style.brightness==Brightness.dark?Colors.white:Colors.black87)))),
-    ]),
+
+  Widget _tile(String label, String value, double size) => Container(
+    alignment: Alignment.center,
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: style.surface.withValues(alpha: style.cardOpacity),
+      borderRadius: BorderRadius.circular(style.radius),
+    ),
+    child: FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Text(label, style: TextStyle(color: style.brightness == Brightness.light ? Colors.black54 : style.accent)),
+        Text(value, style: TextStyle(fontSize: size)),
+      ]),
+    ),
   );
 }
