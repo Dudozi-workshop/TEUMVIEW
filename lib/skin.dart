@@ -19,6 +19,13 @@ class SkinStyle {
   ];
   static const premiumProducts = {'sage_glass':'teumview_skin_sage_glass','midnight_blue':'teumview_skin_midnight_blue'};
   static SkinStyle resolve(String? id) => catalog.firstWhere((s) => s.id == id, orElse: () => catalog.first);
+  // Only verified store entitlements may unlock a premium style.
+  static SkinStyle resolveEntitled(String? id, Set<String> verifiedProducts) {
+    for (final style in premiumCatalog) {
+      if (style.id == id && verifiedProducts.contains(premiumProducts[style.id])) return style;
+    }
+    return resolve(id);
+  }
   ThemeData theme({Color? accentOverride}) => ThemeData(useMaterial3: true, brightness: brightness, scaffoldBackgroundColor: background, colorScheme: ColorScheme.fromSeed(seedColor: accentOverride ?? accent, brightness: brightness));
 }
 
